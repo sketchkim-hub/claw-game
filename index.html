@@ -250,25 +250,29 @@ function drawMoon(px,py,s,rot){xf(px,py,rot,()=>{
 })}
 
 const TYPES=[
-  {n:'콩떡이',p:10,c:'#e8c49a',g:.75,draw:drawKong},
-  {n:'말랑곰',p:10,c:'#f3e2b6',g:.75,draw:drawBear},
-  {n:'솜솜이',p:15,c:'#ffb3c8',g:.65,draw:drawSom},
-  {n:'꿀벌콩',p:15,c:'#ffd54a',g:.65,draw:drawBee},
-  {n:'단무다',p:15,c:'#f3e06a',g:.65,draw:drawRadish},
-  {n:'도토리',p:20,c:'#c48a4a',g:.55,draw:drawDotori},
-  {n:'감자펭',p:20,c:'#f3e4a0',g:.55,draw:drawPeng},
-  {n:'호떡포',p:20,c:'#e0a050',g:.55,draw:drawHotteok},
-  {n:'딸기냥',p:25,c:'#e8576a',g:.5,draw:drawBerry},
-  {n:'밤송이',p:25,c:'#6b3a18',g:.5,draw:drawChestnut},
-  {n:'개굴몽',p:30,c:'#8fd9b8',g:.45,draw:drawFrog},
-  {n:'구름고래',p:35,c:'#9ad0f5',g:.4,draw:drawWhale},
-  {n:'달마우',p:40,c:'#d5c4f0',g:.35,draw:drawMoon},
-  {n:'별똥이',p:50,c:'#ffd700',g:.3,draw:drawStar,rare:true}
+  {n:'콩떡이',p:10,c:'#e8c49a',draw:drawKong},
+  {n:'말랑곰',p:10,c:'#f3e2b6',draw:drawBear},
+  {n:'솜솜이',p:15,c:'#ffb3c8',draw:drawSom},
+  {n:'꿀벌콩',p:15,c:'#ffd54a',draw:drawBee},
+  {n:'단무다',p:15,c:'#f3e06a',draw:drawRadish},
+  {n:'도토리',p:20,c:'#c48a4a',draw:drawDotori},
+  {n:'감자펭',p:20,c:'#f3e4a0',draw:drawPeng},
+  {n:'호떡포',p:20,c:'#e0a050',draw:drawHotteok},
+  {n:'딸기냥',p:25,c:'#e8576a',draw:drawBerry},
+  {n:'밤송이',p:25,c:'#6b3a18',draw:drawChestnut},
+  {n:'개굴몽',p:30,c:'#8fd9b8',draw:drawFrog},
+  {n:'구름고래',p:35,c:'#9ad0f5',draw:drawWhale},
+  {n:'달마우',p:40,c:'#d5c4f0',draw:drawMoon},
+  {n:'별똥이',p:50,c:'#ffd700',draw:drawStar,rare:true}
 ];
 const N_DOLLS=24;
 let dolls,score,tries,time,state,claw,keys={},hi=+localStorage.clawHi||0,timer,msg='',msgT=0;
 $('hi').textContent=hi;
-function pickType(){if(Math.random()<.07)return TYPES.find(t=>t.rare);const pool=TYPES.filter(t=>!t.rare);return pool[Math.floor(Math.random()*pool.length)]}
+const RARE_RATE=.06,RARE_OK=.25,TARGET_OK=.40,SLIP_SHARE=.35/.60,CARRY_DROP_FRAMES=45;
+const COMMON_OK=(TARGET_OK-RARE_RATE*RARE_OK)/(1-RARE_RATE);
+function pickType(){if(Math.random()<RARE_RATE)return TYPES.find(t=>t.rare);const pool=TYPES.filter(t=>!t.rare);return pool[Math.floor(Math.random()*pool.length)]}
+function grabOutcome(t,rnd=Math.random()){const p=t&&t.rare?RARE_OK:COMMON_OK;if(rnd<p)return 'ok';if(rnd<p+(1-p)*SLIP_SHARE)return 'slip';return 'drop'}
+function applyGrab(d){if(!d)return;const o=grabOutcome(d.t);if(o==='slip'){say('미끄러졌어요!');return}d.held=true;claw.held=d;claw.willDrop=o==='drop';claw.dropT=0}
 function newDolls(){
   dolls=[];
   const cols=6,rows=4,x0=CHUTE+38,x1=W-28,span=x1-x0;
@@ -281,16 +285,16 @@ function newDolls(){
   }
 }
 function reset(){score=0;tries=4;newDolls();startTry();state='move';$('ov').classList.add('hide');upd()}
-function startTry(){claw={x:W/2,y:40,open:1,held:null};time=15;state='move';clearInterval(timer);timer=setInterval(()=>{if(state=='move'){time--;if(time<=0)drop()}upd()},1000)}
+function startTry(){claw={x:W/2,y:40,open:1,held:null,willDrop:false,dropT:0};time=15;state='move';clearInterval(timer);timer=setInterval(()=>{if(state=='move'){time--;if(time<=0)drop()}upd()},1000)}
 function upd(){$('sc').textContent=score;$('tr').textContent=tries;$('tm').textContent=Math.max(0,time)}
 function drop(){if(state!='move')return;state='down'}
 function say(m){msg=m;msgT=70}
 function step(){
  if(state=='move'){if(keys.l)claw.x-=3;if(keys.r)claw.x+=3;claw.x=Math.max(CHUTE/2,Math.min(W-25,claw.x))}
  else if(state=='down'){claw.y+=4;let hit=dolls.find(d=>!d.held&&Math.abs(d.x-claw.x)<24&&claw.y+30>=d.y-d.r);if(hit||claw.y>=FLOOR-40){state='grab';claw.cand=hit;claw.wait=20}}
- else if(state=='grab'){claw.open=Math.max(0,claw.open-.06);if(--claw.wait<=0){let d=claw.cand;if(d&&Math.random()<d.t.g){d.held=true;claw.held=d}state='up'}}
- else if(state=='up'){claw.y-=3;if(claw.held&&claw.y>80&&Math.random()<.004){drp('앗! 떨어졌어요 😢')}if(claw.y<=40){claw.y=40;state=claw.held?'carry':'end'}}
- else if(state=='carry'){claw.x-=3;if(claw.held&&Math.random()<.003)drp('앗! 떨어졌어요 😢');if(claw.x<=CHUTE/2){claw.x=CHUTE/2;state='release'}}
+ else if(state=='grab'){claw.open=Math.max(0,claw.open-.06);if(--claw.wait<=0){applyGrab(claw.cand);state='up'}}
+ else if(state=='up'){claw.y-=3;if(claw.y<=40){claw.y=40;state=claw.held?'carry':'end'}}
+ else if(state=='carry'){if(!(claw.held&&claw.willDrop&&claw.x<=CHUTE/2))claw.x-=3;if(claw.held&&claw.willDrop){claw.dropT=(claw.dropT||0)+1;if(claw.dropT>=CARRY_DROP_FRAMES)drp('아깝다!')}else if(claw.x<=CHUTE/2){claw.x=CHUTE/2;state='release'}}
  else if(state=='release'){claw.open=Math.min(1,claw.open+.06);if(claw.held){let d=claw.held;d.held=false;claw.held=null;d.vy=0;d.win=true}if(claw.open>=1)state='end'}
  else if(state=='end'){claw.open=1;endTry()}
  if(claw.held){claw.held.x=claw.x;claw.held.y=claw.y+44;claw.held.rot=Math.sin(performance.now()/180)*.22}
