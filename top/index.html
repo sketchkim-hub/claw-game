@@ -16,6 +16,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:
 #timer .hint{font-size:10px;color:#c8bdd8;margin-top:2px;white-space:nowrap}
 #leave{top:max(8px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right));background:rgba(20,10,30,.8);color:#fff;border:2px solid #ff7ad9;border-radius:999px;padding:8px 16px;font-weight:800;font-size:14px;box-shadow:0 0 12px rgba(255,80,180,.35)}
 #leave.hide,#drop.hide,#joy.hide{visibility:hidden;pointer-events:none}
+#backSt.hide,#stageBox.hide{display:none!important}
 #joy{left:max(12px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));width:132px;height:132px;border-radius:50%;background:radial-gradient(circle at 50% 45%,#2c2c36 0%,#141418 68%,#000 100%);box-shadow:0 10px 18px rgba(0,0,0,.5),inset 0 0 0 9px #1a1a20,inset 0 2px 6px rgba(255,255,255,.08);touch-action:none}
 #joy svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #knob{position:absolute;width:56px;height:56px;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 34% 30%,#ff9a9a 0%,#e02228 46%,#8a0008 78%,#4a0004 100%);box-shadow:0 8px 10px rgba(0,0,0,.55),inset 0 5px 8px rgba(255,255,255,.4),inset 0 -4px 6px rgba(0,0,0,.35);pointer-events:none}
@@ -29,6 +30,22 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:
 #st{font-size:20px;font-weight:800;border:none;border-radius:14px;padding:12px 28px;background:linear-gradient(#7ec8ff,#4a90ff);color:#fff;box-shadow:0 4px #2a5db0}
 #sw{margin:12px 0 0;font-size:14px;font-weight:700}
 #sw a{color:#ffb3e0;text-decoration:none}
+#stageBox{margin:6px 0 2px}
+#stageLab{font-size:12px;color:#ffe66a;font-weight:700;margin-bottom:6px}
+#stages{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+#stages button{min-width:54px;padding:8px 6px;font-size:12px;border:none;border-radius:10px;background:linear-gradient(#ff8ab8,#e0457b);color:#fff;box-shadow:0 3px #a03060;font-weight:800}
+#stages button.on{outline:3px solid #ffe66a;outline-offset:1px}
+#stages button.locked{background:#555;box-shadow:0 3px #333;opacity:.7;cursor:not-allowed}
+#backSt{margin-top:8px;background:#667;box-shadow:0 4px #445;color:#fff;border:none;border-radius:12px;padding:8px 16px;font-weight:800}
+#banner{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:9;background:rgba(20,6,40,.28)}
+#banner.hide{display:none!important}
+#banner b{font-size:42px;color:#ffe66a;text-shadow:0 0 16px rgba(255,230,100,.7)}
+#banner span{font-size:18px;color:#fff;margin-top:6px;font-weight:800}
+@media (orientation:landscape){
+  #stages button{min-width:46px;padding:5px 4px;font-size:11px}
+  #banner b{font-size:28px}
+  #banner span{font-size:14px}
+}
 @media (orientation:landscape){
   #timer{padding:4px 16px 5px;min-width:150px;border-radius:14px}
   #tm{font-size:26px}
@@ -44,7 +61,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:
 }
 </style></head><body>
 <canvas id="c"></canvas>
-<div id="hudL">점수 <b id="sc">0</b><br>남은 기회 <b id="tr">4</b><br>최고 <b id="hi">0</b></div>
+<div id="hudL">STAGE <b id="sg">1</b><br>점수 <b id="sc">0</b> / <b id="tg">30</b><br>남은 기회 <b id="tr">4</b><br>최고 <b id="hi">0</b></div>
 <div id="timer"><div class="lab">남은 시간</div><div id="tm">15</div><div class="hint">조이스틱으로 집게를 움직이세요</div></div>
 <button id="leave" class="hide" type="button">나가기</button>
 <div id="joy" class="hide">
@@ -62,11 +79,14 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:
 </div>
 <button id="drop" class="hide" type="button">뽑기!</button>
 <div id="ov"><div class="card">
-  <h2>🧸 말랑 인형뽑기</h2>
-  <p>조이스틱으로 집게를 움직이고<br>뽑기! 버튼으로 인형을 집으세요.<br>왼쪽 앞 출구 박스에 넣으면 점수!<br>말랑 친구 14종류 · ✨ 별똥이는 50점</p>
+  <h2 id="ot">🧸 말랑 인형뽑기</h2>
+  <p id="om">조이스틱으로 집게를 움직이고<br>뽑기! 버튼으로 인형을 집으세요.<br>왼쪽 앞 출구 박스에 넣으면 점수!<br>말랑 친구 14종류 · ✨ 별똥이는 50점</p>
+  <div id="stageBox"><div id="stageLab">스테이지 선택</div><div id="stages"></div></div>
   <button id="st" type="button">시작하기</button>
+  <button id="backSt" class="hide" type="button">스테이지 선택</button>
   <p id="sw"><a href="../">→ 옆에서 보기</a></p>
 </div></div>
+<div id="banner" class="hide"><b id="bn">STAGE 1</b><span id="bt">목표 30점</span></div>
 <script>
 const cv=document.getElementById('c'),x=cv.getContext('2d'),P2=Math.PI*2,$=id=>document.getElementById(id);
 const N_DOLLS=50,CHUTE={wx:.16,wz:.07};
@@ -116,11 +136,28 @@ const TYPES=[
 
 let dolls,score,tries,time,state,claw,keys={},hi=+localStorage.clawHiTop||0,timer,msg='',msgT=0,jx=0,jy=0;
 $('hi').textContent=hi;
-const RARE_RATE=.06,RARE_OK=.25,TARGET_OK=.40,SLIP_SHARE=.35/.60,CARRY_DROP_FRAMES=45;
-const COMMON_OK=(TARGET_OK-RARE_RATE*RARE_OK)/(1-RARE_RATE);
-function pickType(){if(Math.random()<RARE_RATE)return TYPES.find(t=>t.rare);const pool=TYPES.filter(t=>!t.rare);return pool[Math.floor(Math.random()*pool.length)]}
-function grabOutcome(t,rnd=Math.random()){const p=t&&t.rare?RARE_OK:COMMON_OK;if(rnd<p)return 'ok';if(rnd<p+(1-p)*SLIP_SHARE)return 'slip';return 'drop'}
+
+const SLIP_SHARE=.35/.60,CARRY_DROP_FRAMES=45,STAGE_KEY='clawStageHiTop';
+const STAGES=[
+  {n:1,ok:.40,rareOk:.25,rareRate:.06,target:30,sway:0,speed:1,easyW:1,midW:1,highW:1},
+  {n:2,ok:.35,rareOk:.20,rareRate:.08,target:40,sway:.4,speed:1.15,easyW:.5,midW:1,highW:1.35},
+  {n:3,ok:.30,rareOk:.16,rareRate:.10,target:45,sway:.65,speed:1.28,easyW:.25,midW:1,highW:1.7},
+  {n:4,ok:.25,rareOk:.12,rareRate:.12,target:50,sway:.9,speed:1.42,easyW:.1,midW:.85,highW:2.1}
+];
+let unlocked=Math.max(1,Math.min(4,+localStorage[STAGE_KEY]||1)),stage=1,ST=STAGES[0],stageDone=false,selected=unlocked;
+function setStage(n){stage=n;ST=STAGES[n-1]}
+function typeWeight(t){return t.p<=15?ST.easyW:t.p<=25?ST.midW:ST.highW}
+function pickType(){if(Math.random()<ST.rareRate)return TYPES.find(t=>t.rare);const pool=TYPES.filter(t=>!t.rare);const sum=pool.reduce((a,t)=>a+typeWeight(t),0);let r=Math.random()*sum;for(const t of pool){r-=typeWeight(t);if(r<=0)return t}return pool[0]}
+function grabOutcome(t,rnd=Math.random()){const commonOk=(ST.ok-ST.rareRate*ST.rareOk)/(1-ST.rareRate);const p=t&&t.rare?ST.rareOk:commonOk;if(rnd<p)return 'ok';if(rnd<p+(1-p)*SLIP_SHARE)return 'slip';return 'drop'}
 function applyGrab(d){if(!d)return;const o=grabOutcome(d.t);if(o==='slip'){say('미끄러졌어요!');return}d.held=true;claw.held=d;claw.willDrop=o==='drop';claw.dropT=0}
+function renderStages(){const box=$('stages');box.innerHTML='';STAGES.forEach(s=>{const b=document.createElement('button');b.type='button';b.textContent=s.n<=unlocked?'STAGE '+s.n:'🔒 '+s.n;if(s.n>unlocked)b.className='locked';if(s.n===selected)b.classList.add('on');b.onclick=()=>{if(s.n>unlocked)return;selected=s.n;renderStages()};box.appendChild(b)})}
+function showBanner(){$('bn').textContent='STAGE '+stage;$('bt').textContent='목표 '+ST.target+'점';$('banner').classList.remove('hide');clearTimeout(showBanner._t);showBanner._t=setTimeout(()=>$('banner').classList.add('hide'),1600)}
+function startStage(n){if(n>unlocked)return;setStage(n);selected=n;score=0;tries=4;stageDone=false;newDolls();startTry();state='move';$('ov').classList.add('hide');if($('backSt'))$('backSt').classList.add('hide');showPlayUI(true);showBanner();upd()}
+function showStart(){stageDone=false;state=null;clearInterval(timer);showPlayUI(false);jx=0;jy=0;if(typeof resetKnob==='function')resetKnob();$('ot').textContent='🧸 말랑 인형뽑기';$('om').innerHTML='조이스틱으로 집게를 움직이고<br>뽑기! 버튼으로 인형을 집으세요.<br>왼쪽 앞 출구 박스에 넣으면 점수!<br>말랑 친구 14종류 · ✨ 별똥이는 50점';$('st').textContent='시작하기';$('st').onclick=()=>startStage(selected);$('stageBox').classList.remove('hide');if($('backSt'))$('backSt').classList.add('hide');$('ov').classList.remove('hide');renderStages()}
+function maybeClear(){if(stageDone)return true;if(score>=ST.target){stageClear();return true}return false}
+function stageClear(){if(stageDone)return;stageDone=true;state='over';clearInterval(timer);if(score>hi){hi=score;localStorage.clawHiTop=hi;$('hi').textContent=hi}if(stage<4&&unlocked<stage+1){unlocked=stage+1;localStorage[STAGE_KEY]=unlocked}$('ot').textContent='클리어!';$('om').innerHTML='STAGE '+stage+' 성공!<br>점수 <b>'+score+'</b> / 목표 '+ST.target+'점';$('st').textContent=stage<4?'다음 스테이지':'다시 도전';$('st').onclick=()=>startStage(stage<4?stage+1:stage);$('stageBox').classList.add('hide');$('backSt').classList.remove('hide');showPlayUI(false);$('ov').classList.remove('hide')}
+function stageFail(){if(stageDone)return;stageDone=true;state='over';clearInterval(timer);if(score>hi){hi=score;localStorage.clawHiTop=hi;$('hi').textContent=hi}$('ot').textContent='아쉬워요!';$('om').innerHTML='목표 '+ST.target+'점에 못 미쳤어요.<br>점수 <b>'+score+'</b>점';$('st').textContent='다시 도전';$('st').onclick=()=>startStage(stage);$('stageBox').classList.add('hide');$('backSt').classList.remove('hide');showPlayUI(false);$('ov').classList.remove('hide')}
+
 function lerp(a,b,t){return a+(b-a)*t}
 function project(wx,wz){const l=lerp(V.fL,V.rL,wz),r=lerp(V.fR,V.rR,wz);return{x:l+wx*(r-l),y:lerp(V.fY,V.rY,wz),sc:lerp(V.fS,V.rS,wz)}}
 
@@ -162,10 +199,10 @@ function newDolls(){
   }
 }
 
-function reset(){score=0;tries=4;newDolls();startTry();state='move';$('ov').classList.add('hide');showPlayUI(true);upd()}
+function reset(){startStage(selected)}
 function showPlayUI(on){['leave','joy','drop'].forEach(id=>$(id).classList.toggle('hide',!on))}
 function startTry(){claw={wx:.5,wz:.45,open:1,held:null,h:1,willDrop:false,dropT:0};time=15;state='move';clearInterval(timer);timer=setInterval(()=>{if(state=='move'){time--;if(time<=0)drop()}upd()},1000)}
-function upd(){$('sc').textContent=score;$('tr').textContent=tries;$('tm').textContent=Math.max(0,time)}
+function upd(){$('sc').textContent=score;$('tr').textContent=tries;$('tm').textContent=Math.max(0,time);if($('tg'))$('tg').textContent=ST.target;if($('sg'))$('sg').textContent=stage}
 function drop(){if(state!='move')return;state='down'}
 function say(m){msg=m;msgT=80}
 function canSteer(){return state=='move'||state=='carry'}
@@ -185,11 +222,12 @@ function hitDoll(){
 }
 function step(){
   if(canSteer()){
-    const sp=.012;
+    const sp=.012*ST.speed;
     let dx=jx, dz=-jy;
     if(keys.l)dx-=1;if(keys.r)dx+=1;if(keys.u)dz+=1;if(keys.d)dz-=1;
     const m=Math.hypot(dx,dz)||1;
     if(dx||dz){claw.wx+=dx/m*sp;claw.wz+=dz/m*sp}
+    if(ST.sway){const w=Math.sin(performance.now()/180)*ST.sway*0.0018;claw.wx+=w}
     claw.wx=Math.max(.06,Math.min(.94,claw.wx));
     claw.wz=Math.max(.05,Math.min(.92,claw.wz));
   }
@@ -203,15 +241,14 @@ function step(){
   for(const d of dolls){
     if(d.held||!d.win)continue;
     d.wx+=(CHUTE.wx-d.wx)*.18;d.wz+=(CHUTE.wz-d.wz)*.18;d.r*=.9;d.lift*=.9;
-    if(d.r<4){score+=d.t.p;say('+'+d.t.p+' '+d.t.n);d.dead=true;upd()}
+    if(d.r<4){score+=d.t.p;say('+'+d.t.p+' '+d.t.n);d.dead=true;upd();maybeClear()}
   }
   dolls=dolls.filter(d=>!d.dead);
 }
 function drp(m){const d=claw.held;d.held=false;claw.held=null;d.r=d.sr||21;d.lift=0;say(m);state='end'}
-function endTry(){if(state=='over')return;tries--;upd();if(dolls.filter(d=>!d.win).length<18){newDolls();say('인형 리필! 🎁')}
- if(tries<=0){state='over';clearInterval(timer);setTimeout(gameOver,900)}else startTry()}
-function gameOver(){if(score>hi){hi=score;localStorage.clawHiTop=hi;$('hi').textContent=hi}$('ov').querySelector('h2').textContent='게임 오버!';$('ov').querySelector('p').innerHTML='최종 점수 <b style="color:#ffe66a">'+score+'</b>점<br>최고 점수 '+hi+'점';$('st').textContent='다시 하기';showPlayUI(false);$('ov').classList.remove('hide')}
-function goStart(){clearInterval(timer);state=null;jx=0;jy=0;resetKnob();showPlayUI(false);$('ov').querySelector('h2').textContent='🧸 말랑 인형뽑기';$('ov').querySelector('p').innerHTML='조이스틱으로 집게를 움직이고<br>뽑기! 버튼으로 인형을 집으세요.<br>왼쪽 앞 출구 박스에 넣으면 점수!<br>말랑 친구 14종류 · ✨ 별똥이는 50점';$('st').textContent='시작하기';$('ov').classList.remove('hide');time=15;upd()}
+function endTry(){if(state=='over'||stageDone)return;tries--;upd();if(maybeClear())return;if(dolls.filter(d=>!d.win).length<18){newDolls();say('인형 리필! 🎁')}
+ if(tries<=0){state='over';clearInterval(timer);setTimeout(()=>{if(!stageDone){if(score>=ST.target)stageClear();else stageFail()}},900)}else startTry()}
+function goStart(){showStart();time=15;upd()}
 
 function glow(color,blur){x.shadowColor=color;x.shadowBlur=blur}
 function noGlow(){x.shadowBlur=0;x.shadowColor='transparent'}
@@ -372,13 +409,13 @@ function joyAt(e,el){
 claw={wx:.5,wz:.45,open:1,h:1,held:null};
 makeStars();layout();newDolls();state=null;showPlayUI(false);loop();
 addEventListener('resize',()=>{layout();makeStars()});
-$('st').onclick=reset;
+$('st').onclick=()=>startStage(selected);$('backSt').onclick=showStart;renderStages();
 $('leave').onclick=goStart;
 $('drop').onclick=drop;
 onkeydown=e=>{
   if(e.key=='ArrowLeft')keys.l=1;if(e.key=='ArrowRight')keys.r=1;
   if(e.key=='ArrowUp'){e.preventDefault();keys.u=1}if(e.key=='ArrowDown'){e.preventDefault();keys.d=1}
-  if(e.key==' '){e.preventDefault();if(!state)$('st').click();else drop()}
+  if(e.key==' '){e.preventDefault();if(!$('ov').classList.contains('hide'))$('st').click();else if(state)drop()}
   if(e.key=='Escape')goStart();
 };
 onkeyup=e=>{

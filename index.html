@@ -22,12 +22,24 @@ button:active{transform:translateY(3px);box-shadow:0 1px #3d7fd6}
 #alt a{color:#e0457b;text-decoration:none;padding:6px 12px;border:2px solid #ffb3c8;border-radius:12px;background:#fff}
 #ov #sw{margin-top:10px;font-size:14px;font-weight:bold}
 #ov #sw a{color:#e0457b;text-decoration:none}
+#hud{flex-wrap:wrap;justify-content:center;row-gap:4px}
+#stageBox{margin:4px 0 2px}
+#stageLab{font-size:13px;color:#e0457b;font-weight:700;margin-bottom:6px}
+#stages{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+#stages button{min-width:58px;padding:10px 8px;font-size:13px;background:#ff7aa8;box-shadow:0 3px #c45a80}
+#stages button.on{outline:3px solid #ffe66a;outline-offset:1px}
+#stages button.locked{background:#c8c0c4;box-shadow:0 3px #8e888c;opacity:.75;cursor:not-allowed}
+#backSt{margin-top:8px;background:#9aa;box-shadow:0 4px #778;font-size:16px}
+#banner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:7;background:rgba(224,69,123,.22);border-radius:16px}
+#banner.hide{display:none!important}
+#banner b{font-size:44px;color:#fff;text-shadow:0 3px 0 #c44572,0 0 18px #ff7aa8}
+#banner span{font-size:18px;color:#fff;margin-top:6px;font-weight:800}
 
 </style></head><body>
 <h1>🧸 말랑 인형뽑기</h1>
-<div id="hud"><span>점수 <b id="sc">0</b></span><span>남은 기회 <b id="tr">4</b></span><span>시간 <b id="tm">15</b>초</span><span>최고 <b id="hi">0</b></span></div>
+<div id="hud"><span>STAGE <b id="sg">1</b></span><span>점수 <b id="sc">0</b>/<b id="tg">30</b></span><span>남은 기회 <b id="tr">4</b></span><span>시간 <b id="tm">15</b>초</span><span>최고 <b id="hi">0</b></span></div>
 <div id="wrap"><canvas id="c" width="360" height="480"></canvas>
-<div id="ov"><h2 id="ot">🧸 말랑 인형뽑기</h2><p id="om">집게를 움직여 인형을 집고<br>왼쪽 출구 구멍에 떨어뜨리세요!<br>말랑 친구 14종류 · ✨ 별똥이는 50점</p><button id="st">시작하기</button><p id="sw"><a href="top/">↑ 위에서 보기</a></p></div></div>
+<div id="ov"><h2 id="ot">🧸 말랑 인형뽑기</h2><p id="om">집게를 움직여 인형을 집고<br>왼쪽 출구 구멍에 떨어뜨리세요!<br>말랑 친구 14종류 · ✨ 별똥이는 50점</p><div id="stageBox"><div id="stageLab">스테이지 선택</div><div id="stages"></div></div><button id="st">시작하기</button><button id="backSt" class="hide" type="button">스테이지 선택</button><p id="sw"><a href="top/">↑ 위에서 보기</a></p></div><div id="banner" class="hide"><b id="bn">STAGE 1</b><span id="bt">목표 30점</span></div></div>
 <div id="ctrl"><button id="lb">◀</button><button id="drop">집기!</button><button id="rb">▶</button></div>
 <div id="help">PC: ← → 이동, 스페이스 집기 · 기회 4번, 한 번에 15초</div>
 <div id="alt"><a href="top/">↑ 위에서 보기</a></div>
@@ -268,11 +280,28 @@ const TYPES=[
 const N_DOLLS=24;
 let dolls,score,tries,time,state,claw,keys={},hi=+localStorage.clawHi||0,timer,msg='',msgT=0;
 $('hi').textContent=hi;
-const RARE_RATE=.06,RARE_OK=.25,TARGET_OK=.40,SLIP_SHARE=.35/.60,CARRY_DROP_FRAMES=45;
-const COMMON_OK=(TARGET_OK-RARE_RATE*RARE_OK)/(1-RARE_RATE);
-function pickType(){if(Math.random()<RARE_RATE)return TYPES.find(t=>t.rare);const pool=TYPES.filter(t=>!t.rare);return pool[Math.floor(Math.random()*pool.length)]}
-function grabOutcome(t,rnd=Math.random()){const p=t&&t.rare?RARE_OK:COMMON_OK;if(rnd<p)return 'ok';if(rnd<p+(1-p)*SLIP_SHARE)return 'slip';return 'drop'}
+
+const SLIP_SHARE=.35/.60,CARRY_DROP_FRAMES=45,STAGE_KEY='clawStageHi';
+const STAGES=[
+  {n:1,ok:.40,rareOk:.25,rareRate:.06,target:30,sway:0,speed:1,easyW:1,midW:1,highW:1},
+  {n:2,ok:.35,rareOk:.20,rareRate:.08,target:40,sway:.4,speed:1.15,easyW:.5,midW:1,highW:1.35},
+  {n:3,ok:.30,rareOk:.16,rareRate:.10,target:45,sway:.65,speed:1.28,easyW:.25,midW:1,highW:1.7},
+  {n:4,ok:.25,rareOk:.12,rareRate:.12,target:50,sway:.9,speed:1.42,easyW:.1,midW:.85,highW:2.1}
+];
+let unlocked=Math.max(1,Math.min(4,+localStorage[STAGE_KEY]||1)),stage=1,ST=STAGES[0],stageDone=false,selected=unlocked;
+function setStage(n){stage=n;ST=STAGES[n-1]}
+function typeWeight(t){return t.p<=15?ST.easyW:t.p<=25?ST.midW:ST.highW}
+function pickType(){if(Math.random()<ST.rareRate)return TYPES.find(t=>t.rare);const pool=TYPES.filter(t=>!t.rare);const sum=pool.reduce((a,t)=>a+typeWeight(t),0);let r=Math.random()*sum;for(const t of pool){r-=typeWeight(t);if(r<=0)return t}return pool[0]}
+function grabOutcome(t,rnd=Math.random()){const commonOk=(ST.ok-ST.rareRate*ST.rareOk)/(1-ST.rareRate);const p=t&&t.rare?ST.rareOk:commonOk;if(rnd<p)return 'ok';if(rnd<p+(1-p)*SLIP_SHARE)return 'slip';return 'drop'}
 function applyGrab(d){if(!d)return;const o=grabOutcome(d.t);if(o==='slip'){say('미끄러졌어요!');return}d.held=true;claw.held=d;claw.willDrop=o==='drop';claw.dropT=0}
+function renderStages(){const box=$('stages');box.innerHTML='';STAGES.forEach(s=>{const b=document.createElement('button');b.type='button';b.textContent=s.n<=unlocked?'STAGE '+s.n:'🔒 '+s.n;if(s.n>unlocked)b.className='locked';if(s.n===selected)b.classList.add('on');b.onclick=()=>{if(s.n>unlocked)return;selected=s.n;renderStages()};box.appendChild(b)})}
+function showBanner(){$('bn').textContent='STAGE '+stage;$('bt').textContent='목표 '+ST.target+'점';$('banner').classList.remove('hide');clearTimeout(showBanner._t);showBanner._t=setTimeout(()=>$('banner').classList.add('hide'),1600)}
+function startStage(n){if(n>unlocked)return;setStage(n);selected=n;score=0;tries=4;stageDone=false;newDolls();startTry();state='move';$('ov').classList.add('hide');if($('backSt'))$('backSt').classList.add('hide');showBanner();upd()}
+function showStart(){stageDone=false;state=null;clearInterval(timer);$('ot').textContent='🧸 말랑 인형뽑기';$('om').innerHTML='집게를 움직여 인형을 집고<br>왼쪽 출구 구멍에 떨어뜨리세요!<br>말랑 친구 14종류 · ✨ 별똥이는 50점';$('st').textContent='시작하기';$('st').onclick=()=>startStage(selected);$('stageBox').classList.remove('hide');if($('backSt'))$('backSt').classList.add('hide');$('ov').classList.remove('hide');renderStages()}
+function maybeClear(){if(stageDone)return true;if(score>=ST.target){stageClear();return true}return false}
+function stageClear(){if(stageDone)return;stageDone=true;state='over';clearInterval(timer);if(score>hi){hi=score;localStorage.clawHi=hi;$('hi').textContent=hi}if(stage<4&&unlocked<stage+1){unlocked=stage+1;localStorage[STAGE_KEY]=unlocked}$('ot').textContent='클리어!';$('om').innerHTML='STAGE '+stage+' 성공!<br>점수 <b>'+score+'</b> / 목표 '+ST.target+'점';$('st').textContent=stage<4?'다음 스테이지':'다시 도전';$('st').onclick=()=>startStage(stage<4?stage+1:stage);$('stageBox').classList.add('hide');$('backSt').classList.remove('hide');$('ov').classList.remove('hide')}
+function stageFail(){if(stageDone)return;stageDone=true;state='over';clearInterval(timer);if(score>hi){hi=score;localStorage.clawHi=hi;$('hi').textContent=hi}$('ot').textContent='아쉬워요!';$('om').innerHTML='목표 '+ST.target+'점에 못 미쳤어요.<br>점수 <b>'+score+'</b>점';$('st').textContent='다시 도전';$('st').onclick=()=>startStage(stage);$('stageBox').classList.add('hide');$('backSt').classList.remove('hide');$('ov').classList.remove('hide')}
+
 function newDolls(){
   dolls=[];
   const cols=6,rows=4,x0=CHUTE+38,x1=W-28,span=x1-x0;
@@ -284,13 +313,13 @@ function newDolls(){
     dolls.push({t:pickType(),x:Math.max(x0,Math.min(x1,px)),y:py,r:22,vy:0,held:false,rot:0,rv:(Math.random()-.5)*.04});
   }
 }
-function reset(){score=0;tries=4;newDolls();startTry();state='move';$('ov').classList.add('hide');upd()}
+function reset(){startStage(selected)}
 function startTry(){claw={x:W/2,y:40,open:1,held:null,willDrop:false,dropT:0};time=15;state='move';clearInterval(timer);timer=setInterval(()=>{if(state=='move'){time--;if(time<=0)drop()}upd()},1000)}
-function upd(){$('sc').textContent=score;$('tr').textContent=tries;$('tm').textContent=Math.max(0,time)}
+function upd(){$('sc').textContent=score;$('tr').textContent=tries;$('tm').textContent=Math.max(0,time);if($('tg'))$('tg').textContent=ST.target;if($('sg'))$('sg').textContent=stage}
 function drop(){if(state!='move')return;state='down'}
 function say(m){msg=m;msgT=70}
 function step(){
- if(state=='move'){if(keys.l)claw.x-=3;if(keys.r)claw.x+=3;claw.x=Math.max(CHUTE/2,Math.min(W-25,claw.x))}
+ if(state=='move'){const sp=3*ST.speed;if(keys.l)claw.x-=sp;if(keys.r)claw.x+=sp;if(ST.sway)claw.x+=Math.sin(performance.now()/180)*ST.sway;claw.x=Math.max(CHUTE/2,Math.min(W-25,claw.x))}
  else if(state=='down'){claw.y+=4;let hit=dolls.find(d=>!d.held&&Math.abs(d.x-claw.x)<24&&claw.y+30>=d.y-d.r);if(hit||claw.y>=FLOOR-40){state='grab';claw.cand=hit;claw.wait=20}}
  else if(state=='grab'){claw.open=Math.max(0,claw.open-.06);if(--claw.wait<=0){applyGrab(claw.cand);state='up'}}
  else if(state=='up'){claw.y-=3;if(claw.y<=40){claw.y=40;state=claw.held?'carry':'end'}}
@@ -298,13 +327,12 @@ function step(){
  else if(state=='release'){claw.open=Math.min(1,claw.open+.06);if(claw.held){let d=claw.held;d.held=false;claw.held=null;d.vy=0;d.win=true}if(claw.open>=1)state='end'}
  else if(state=='end'){claw.open=1;endTry()}
  if(claw.held){claw.held.x=claw.x;claw.held.y=claw.y+44;claw.held.rot=Math.sin(performance.now()/180)*.22}
- for(let d of dolls){if(d.held)continue;let gy=d.win?H+40:FLOOR-d.r;if(d.y<gy&&(d.win||d.vy>0)){d.vy+=.5;d.y=Math.min(gy,d.y+d.vy);d.rot=(d.rot||0)+(d.rv||.02)}if(d.win&&d.y>=H+40){score+=d.t.p;say('+'+d.t.p+' '+d.t.n);d.dead=true;upd()}}
+ for(let d of dolls){if(d.held)continue;let gy=d.win?H+40:FLOOR-d.r;if(d.y<gy&&(d.win||d.vy>0)){d.vy+=.5;d.y=Math.min(gy,d.y+d.vy);d.rot=(d.rot||0)+(d.rv||.02)}if(d.win&&d.y>=H+40){score+=d.t.p;say('+'+d.t.p+' '+d.t.n);d.dead=true;upd();maybeClear()}}
  dolls=dolls.filter(d=>!d.dead);
 }
 function drp(m){let d=claw.held;d.held=false;claw.held=null;d.vy=.5;say(m)}
-function endTry(){if(state=='over')return;tries--;upd();if(dolls.filter(d=>!d.win).length<4){newDolls();say('인형 리필! 🎁')}
- if(tries<=0){state='over';clearInterval(timer);setTimeout(gameOver,900)}else startTry()}
-function gameOver(){if(score>hi){hi=score;localStorage.clawHi=hi;$('hi').textContent=hi}$('ot').textContent='게임 오버!';$('om').innerHTML='최종 점수 <b>'+score+'</b>점<br>최고 점수 '+hi+'점';$('st').textContent='다시 하기';$('ov').classList.remove('hide')}
+function endTry(){if(state=='over'||stageDone)return;tries--;upd();if(maybeClear())return;if(dolls.filter(d=>!d.win).length<4){newDolls();say('인형 리필! 🎁')}
+ if(tries<=0){state='over';clearInterval(timer);setTimeout(()=>{if(!stageDone){if(score>=ST.target)stageClear();else stageFail()}},900)}else startTry()}
 function draw(){
  x.clearRect(0,0,W,H);
  x.fillStyle='#ffe3ef';x.fillRect(0,FLOOR,W,H-FLOOR);
@@ -326,9 +354,9 @@ function draw(){
 }
 function loop(){if(state&&state!='over'||msgT>0)step();draw();requestAnimationFrame(loop)}
 claw={x:W/2,y:40,open:1};newDolls();state=null;loop();
-$('st').onclick=reset;
+$('st').onclick=()=>startStage(selected);$('backSt').onclick=showStart;renderStages();
 const hold=(id,k)=>{let b=$(id);b.onpointerdown=e=>{e.preventDefault();keys[k]=1};b.onpointerup=b.onpointerleave=b.onpointercancel=()=>keys[k]=0};
 hold('lb','l');hold('rb','r');$('drop').onclick=drop;
-onkeydown=e=>{if(e.key=='ArrowLeft')keys.l=1;if(e.key=='ArrowRight')keys.r=1;if(e.key==' '){e.preventDefault();state?drop():reset()}};
+onkeydown=e=>{if(e.key=='ArrowLeft')keys.l=1;if(e.key=='ArrowRight')keys.r=1;if(e.key==' '){e.preventDefault();if(!$('ov').classList.contains('hide'))$('st').click();else if(state)drop()}};
 onkeyup=e=>{if(e.key=='ArrowLeft')keys.l=0;if(e.key=='ArrowRight')keys.r=0};
 </script></body></html>
